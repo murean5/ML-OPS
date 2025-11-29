@@ -1,0 +1,172 @@
+services:
+  clearml-mongo:
+    image: mongo:5.0
+    container_name: clearml-mongo
+    networks:
+      - default
+    volumes:
+      - clearml_mongo:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    hostname: redis
+    networks:
+      - default
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  clearml-elasticsearch:
+    image: elasticsearch:7.17.10
+    container_name: clearml-elasticsearch
+    hostname: elasticsearch
+    networks:
+      - default
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  clearml-apiserver:
+    image: allegroai/clearml:latest
+    container_name: apiserver
+    hostname: apiserver
+    networks:
+      default:
+        aliases:
+          - apiserver
+    ports:
+      - "8008:8008"
+    command: ["apiserver"]
+    volumes:
+      - clearml_data:/opt/clearml/data
+      - clearml_logs:/opt/clearml/logs
+      - ./clearml-config/hosts.conf:/opt/clearml/apiserver/config/default/hosts.conf:ro
+    depends_on:
+      clearml-mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clearml-elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/v2.26/debug.ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  clearml-webserver:
+    image: allegroai/clearml:latest
+    container_name: clearml-webserver
+    networks:
+      - default
+    ports:
+      - "8080:80"
+    command: ["webserver"]
+    environment:
+      CLEARML_API_HOST: http://clearml-apiserver:8008
+      CLEARML_MONGO_HOST: clearml-mongo
+      CLEARML_MONGO_PORT: 27017
+      CLEARML_REDIS_HOST: redis
+      CLEARML_REDIS_PORT: 6379
+      CLEARML_S3_HOST: host.docker.internal:9000
+      CLEARML_S3_ACCESS_KEY: minioadmin
+      CLEARML_S3_SECRET_KEY: minioadmin
+      CLEARML_S3_BUCKET: clearml-models
+      CLEARML_S3_REGION: us-east-1
+      CLEARML_S3_USE_HTTPS: false
+    volumes:
+      - clearml_data:/opt/clearml/data
+      - clearml_logs:/opt/clearml/logs
+    depends_on:
+      clearml-mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clearml-apiserver:
+        condition: service_healthy
+      clearml-fileserver:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/80' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  clearml-fileserver:
+    image: allegroai/clearml:latest
+    container_name: fileserver
+    hostname: fileserver
+    networks:
+      default:
+        aliases:
+          - fileserver
+    ports:
+      - "8081:8081"
+    command: ["fileserver"]
+    environment:
+      CLEARML_API_HOST: apiserver:8008
+      CLEARML_MONGO_HOST: clearml-mongo
+      CLEARML_MONGO_PORT: 27017
+      CLEARML_REDIS_HOST: redis
+      CLEARML_REDIS_PORT: 6379
+      CLEARML_S3_HOST: host.docker.internal:9000
+      CLEARML_S3_ACCESS_KEY: minioadmin
+      CLEARML_S3_SECRET_KEY: minioadmin
+      CLEARML_S3_BUCKET: clearml-models
+      CLEARML_S3_REGION: us-east-1
+      CLEARML_S3_USE_HTTPS: false
+    volumes:
+      - clearml_data:/opt/clearml/data
+      - clearml_logs:/opt/clearml/logs
+    depends_on:
+      clearml-apiserver:
+        condition: service_healthy
+      clearml-mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  default:
+    name: ml-service-network
+    driver: bridge
+
+volumes:
+  clearml_mongo:
+  clearml_data:
+  clearml_logs:
+  clearml_config:
+  elasticsearch_data:
+

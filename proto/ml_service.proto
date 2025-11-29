@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package ml_service;
+
+service MLService {
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+  rpc GetAvailableModels(GetAvailableModelsRequest) returns (GetAvailableModelsResponse);
+
+  rpc GetModels(GetModelsRequest) returns (GetModelsResponse);
+
+  rpc TrainModel(TrainModelRequest) returns (TrainModelResponse);
+
+  rpc Predict(PredictRequest) returns (PredictResponse);
+
+  rpc RetrainModel(RetrainModelRequest) returns (RetrainModelResponse);
+
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+
+  rpc GetDatasets(GetDatasetsRequest) returns (GetDatasetsResponse);
+
+  rpc UploadDataset(UploadDatasetRequest) returns (UploadDatasetResponse);
+
+  rpc DeleteDataset(DeleteDatasetRequest) returns (DeleteDatasetResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+  string version = 2;
+}
+
+message GetAvailableModelsRequest {}
+
+message GetAvailableModelsResponse {
+  repeated string model_types = 1;
+}
+
+message GetModelsRequest {}
+
+message ModelInfo {
+  string model_id = 1;
+  string model_type = 2;
+  string dataset_id = 3;
+  map<string, string> hyperparameters = 4;
+  string created_at = 5;
+  string status = 6;
+}
+
+message GetModelsResponse {
+  repeated ModelInfo models = 1;
+}
+
+message TrainModelRequest {
+  string model_type = 1;
+  string dataset_id = 2;
+  map<string, string> hyperparameters = 3;
+}
+
+message TrainModelResponse {
+  ModelInfo model = 1;
+}
+
+message PredictRequest {
+  string model_id = 1;
+  repeated FeatureVector features = 2;
+}
+
+message FeatureVector {
+  repeated double values = 1;
+}
+
+message PredictResponse {
+  repeated double predictions = 1;
+  string model_id = 2;
+}
+
+message RetrainModelRequest {
+  string model_id = 1;
+  string dataset_id = 2;
+  map<string, string> hyperparameters = 3;
+}
+
+message RetrainModelResponse {
+  ModelInfo model = 1;
+}
+
+message DeleteModelRequest {
+  string model_id = 1;
+}
+
+message DeleteModelResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetDatasetsRequest {}
+
+message DatasetInfo {
+  string dataset_id = 1;
+  string filename = 2;
+  int64 size = 3;
+  string created_at = 4;
+  string dvc_version = 5;
+}
+
+message GetDatasetsResponse {
+  repeated DatasetInfo datasets = 1;
+}
+
+message UploadDatasetRequest {
+  string filename = 1;
+  bytes content = 2;
+  string format = 3;
+}
+
+message UploadDatasetResponse {
+  DatasetInfo dataset = 1;
+}
+
+message DeleteDatasetRequest {
+  string dataset_id = 1;
+}
+
+message DeleteDatasetResponse {
+  bool success = 1;
+  string message = 2;
+}
+

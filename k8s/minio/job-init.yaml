@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-init
+  namespace: ml-service
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: mc
+        image: minio/mc:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Waiting for MinIO to be ready..."
+          until mc alias set myminio http://minio:9000 minioadmin minioadmin 2>/dev/null; do
+            echo "Waiting for MinIO..."
+            sleep 5
+          done
+          echo "MinIO connected, creating buckets..."
+          mc mb myminio/dvc-storage --ignore-existing || true
+          mc mb myminio/clearml-models --ignore-existing || true
+          echo "MinIO buckets initialized: dvc-storage, clearml-models"
+

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-grpc
+  namespace: ml-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-grpc
+  template:
+    metadata:
+      labels:
+        app: ml-grpc
+    spec:
+      containers:
+      - name: ml-grpc
+        image: ml-grpc:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 50051
+          name: grpc
+        envFrom:
+        - configMapRef:
+            name: ml-service-config
+        - secretRef:
+            name: ml-service-secret
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+        - name: datasets
+          mountPath: /app/data
+        - name: dvc-cache
+          mountPath: /app/.dvc/cache
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: api-models-data
+      - name: datasets
+        persistentVolumeClaim:
+          claimName: api-datasets-data
+      - name: dvc-cache
+        persistentVolumeClaim:
+          claimName: api-dvc-cache
+

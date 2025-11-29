@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "ml-service"
+version = "0.1.0"
+description = "ML Service with REST and gRPC APIs, Streamlit dashboard, DVC and ClearML integration"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+grpcio = "^1.59.0"
+grpcio-tools = "^1.59.0"
+protobuf = "^4.25.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+scikit-learn = "^1.3.2"
+pandas = "^2.1.3"
+numpy = "^1.26.2"
+streamlit = "^1.28.1"
+dvc = {extras = ["s3"], version = "^3.40.0"}
+clearml = "^1.14.0"
+boto3 = "^1.29.7"
+minio = "^7.2.0"
+python-multipart = "^0.0.6"
+python-json-logger = "^2.0.7"
+httpx = "^0.25.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+pytest-asyncio = "^0.21.1"
+black = "^23.11.0"
+flake8 = "^6.1.0"
+mypy = "^1.7.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+

@@ -1,0 +1,23 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN pip install poetry && \
+    poetry config virtualenvs.create false
+
+COPY pyproject.toml poetry.lock* ./
+
+RUN poetry install --only main --no-interaction --no-ansi --no-root
+
+COPY . .
+
+RUN python -m grpc_tools.protoc -I proto --python_out=. --grpc_python_out=. proto/ml_service.proto
+
+RUN mkdir -p models data .dvc/cache
+
+RUN if [ ! -f .dvc/config ]; then dvc init --no-scm; fi
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+

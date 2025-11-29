@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-dashboard
+  namespace: ml-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-dashboard
+  template:
+    metadata:
+      labels:
+        app: ml-dashboard
+    spec:
+      containers:
+      - name: ml-dashboard
+        image: ml-dashboard:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8501
+          name: http
+        env:
+        - name: API_BASE_URL
+          value: "http://ml-api:8000"
+        - name: BROWSER_API_URL
+          value: "http://localhost:8000"
+        livenessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+

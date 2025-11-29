@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-api
+  namespace: ml-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-api
+  template:
+    metadata:
+      labels:
+        app: ml-api
+    spec:
+      initContainers:
+      - name: wait-for-minio
+        image: busybox:1.35
+        command: ['sh', '-c', 'until wget -q --spider http://minio:9000/minio/health/live 2>/dev/null || nc -z minio 9000; do echo "Waiting for MinIO..."; sleep 2; done;']
+      containers:
+      - name: ml-api
+        image: ml-api:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+          name: http
+        envFrom:
+        - configMapRef:
+            name: ml-service-config
+        - secretRef:
+            name: ml-service-secret
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+        - name: datasets
+          mountPath: /app/data
+        - name: dvc-cache
+          mountPath: /app/.dvc/cache
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: api-models-data
+      - name: datasets
+        persistentVolumeClaim:
+          claimName: api-datasets-data
+      - name: dvc-cache
+        persistentVolumeClaim:
+          claimName: api-dvc-cache
+
